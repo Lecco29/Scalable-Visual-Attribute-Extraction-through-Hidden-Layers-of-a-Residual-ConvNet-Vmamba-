@@ -1,0 +1,67 @@
+# =============================================================================
+# REQUIREMENTS - VMamba Clothing Attributes
+# =============================================================================
+# Dependências necessárias para executar o projeto
+#
+# Instalação: pip install -r requirements.txt
+#
+# Notas:
+# - Para GPU NVIDIA, instale torch com CUDA: pip install torch --index-url https://download.pytorch.org/whl/cu118
+# - O pacote 'mamba-ssm' requer CUDA e compilação C++
+# - Se não tiver GPU, o projeto funciona em CPU (mais lento)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# CORE - Framework de Deep Learning
+# -----------------------------------------------------------------------------
+torch>=2.0.0                    # PyTorch - framework principal
+torchvision>=0.15.0             # Utilitários de visão computacional
+torchaudio>=2.0.0               # (opcional) processamento de áudio
+
+# -----------------------------------------------------------------------------
+# MACHINE LEARNING - Bibliotecas de ML clássico
+# -----------------------------------------------------------------------------
+scikit-learn>=1.3.0             # k-NN, cross-validation, métricas
+numpy>=1.24.0                   # Operações numéricas
+pandas>=2.0.0                   # Manipulação de dados tabulares
+
+# -----------------------------------------------------------------------------
+# REDUÇÃO DIMENSIONAL
+# -----------------------------------------------------------------------------
+umap-learn>=0.5.4               # UMAP para redução dimensional
+
+# -----------------------------------------------------------------------------
+# VISUALIZAÇÃO
+# -----------------------------------------------------------------------------
+matplotlib>=3.7.0               # Gráficos e plots
+seaborn>=0.12.0                 # Visualizações estatísticas avançadas
+
+# -----------------------------------------------------------------------------
+# PROCESSAMENTO DE IMAGENS
+# -----------------------------------------------------------------------------
+Pillow>=10.0.0                  # Leitura e manipulação de imagens
+opencv-python>=4.8.0            # (opcional) processamento de imagem avançado
+
+# -----------------------------------------------------------------------------
+# UTILITÁRIOS
+# -----------------------------------------------------------------------------
+tqdm>=4.65.0                    # Barras de progresso
+ipykernel>=6.25.0               # Kernel Jupyter para notebooks
+ipywidgets>=8.0.0               # Widgets interativos para notebooks
+
+# -----------------------------------------------------------------------------
+# VMAMBA (OBRIGATÓRIO)
+# -----------------------------------------------------------------------------
+# O VMamba requer instalação especial com suporte CUDA.
+# Siga as instruções no README para instalação correta.
+#
+# Instalacao:
+# 1. Clone o repositório: git clone https://github.com/MzeroMiko/VMamba
+# 2. Compile o selective_scan: cd vmamba_repo/kernels/selective_scan && pip install .
+# 3. Baixe os pesos do HuggingFace: saurabhati/VMamba_ImageNet_82.6
+# -----------------------------------------------------------------------------
+einops>=0.6.0                   # Operacoes de tensor
+timm>=0.9.0                     # Modelos de visao
+transformers>=4.35.0            # HuggingFace transformers
+safetensors>=0.4.0              # Formato de pesos do modelo
+huggingface_hub>=0.19.0         # Download do HuggingFace
