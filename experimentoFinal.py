@@ -1,26 +1,30 @@
 #!/usr/bin/env python3
-# experimento vmamba para classificacao de atributos de roupas
+# experimento vmamba - classificacao de atributos de roupas
 
 import os
 import sys
 import torch
-import numpy as np
 import pandas as pd
 from datetime import datetime
 from PIL import Image
-from tqdm import tqdm
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import f1_score
 from torchvision import transforms
 
+# adiciona os caminhos
 RAIZ = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, RAIZ)
 sys.path.insert(0, os.path.join(RAIZ, 'models'))
+sys.path.insert(0, os.path.join(RAIZ, 'features'))
+sys.path.insert(0, os.path.join(RAIZ, 'analysis'))
+
+# imports dos modulos do projeto
+from carregadorVMamba import criarExtrator
+from extracaoFeatures import extrairFeatures
+from avaliacaoKNN import avaliarKNN
 
 
 def carregarDataset(caminhoCsv, pastaImagens):
+    # carrega imagens e labels de um csv
+    
     df = pd.read_csv(caminhoCsv)
     
     transform = transforms.Compose([
@@ -46,51 +50,9 @@ def carregarDataset(caminhoCsv, pastaImagens):
     return torch.stack(imagens), labels
 
 
-def extrairFeatures(extrator, imagens, dispositivo, tamanhoBatch=64):
-    todasFeatures = {f'stage{i+1}': [] for i in range(4)}
-    nBatches = (len(imagens) + tamanhoBatch - 1) // tamanhoBatch
-    
-    for i in tqdm(range(nBatches), desc="Extraindo"):
-        inicio = i * tamanhoBatch
-        fim = min((i + 1) * tamanhoBatch, len(imagens))
-        batch = imagens[inicio:fim].to(dispositivo)
-        
-        features = extrator.extrairFeatures(batch, aplicarGAP=True)
-        
-        for estagio, feat in features.items():
-            todasFeatures[estagio].append(feat.numpy())
-    
-    for estagio in todasFeatures:
-        todasFeatures[estagio] = np.vstack(todasFeatures[estagio])
-    
-    return todasFeatures
-
-
-def avaliarKNN(features, labels, k=5, nfolds=5):
-    encoder = LabelEncoder()
-    y = encoder.fit_transform(labels)
-    
-    resultados = {}
-    
-    for estagio, X in features.items():
-        knn = KNeighborsClassifier(n_neighbors=k, metric='euclidean')
-        acuracias = cross_val_score(knn, X, y, cv=nfolds, scoring='accuracy')
-        
-        knn.fit(X, y)
-        predicao = knn.predict(X)
-        f1 = f1_score(y, predicao, average='weighted')
-        
-        resultados[estagio] = {
-            'accuracy_mean': acuracias.mean() * 100,
-            'accuracy_std': acuracias.std() * 100,
-            'f1_score': f1 * 100,
-            'dim': X.shape[1]
-        }
-    
-    return resultados
-
-
 def rodarExperimento(nome, caminhoCsv, pastaImagens, extrator, dispositivo):
+    # roda experimento completo: carrega dados, extrai features, avalia
+    
     print(f"\n--- {nome} ---")
     
     print("Carregando imagens...")
@@ -115,7 +77,7 @@ def main():
     print("Experimento VMamba - Atributos de Roupas")
     print(f"Inicio: {datetime.now().strftime('%H:%M:%S')}")
     
-    # hardware
+    # verifica hardware
     if torch.cuda.is_available():
         dispositivo = 'cuda'
         print(f"GPU: {torch.cuda.get_device_name(0)}")
@@ -123,14 +85,13 @@ def main():
         dispositivo = 'cpu'
         print("Usando CPU")
     
-    # carrega vmamba
+    # carrega o modelo vmamba
     print("\nCarregando modelo...")
-    from carregadorVMamba import criarExtrator
     extrator = criarExtrator(dispositivo=dispositivo)
     
     pastaData = os.path.join(RAIZ, 'data')
     
-    # experimentos
+    # experimento de cor
     resultadosCor = rodarExperimento(
         "COR",
         os.path.join(pastaData, 'labels_color.csv'),
@@ -138,6 +99,7 @@ def main():
         extrator, dispositivo
     )
     
+    # experimento de textura
     resultadosTextura = rodarExperimento(
         "TEXTURA",
         os.path.join(pastaData, 'labels_texture.csv'),
@@ -145,7 +107,7 @@ def main():
         extrator, dispositivo
     )
     
-    # salva csv
+    # salva resultados em csv
     for nome, resultados in [('color', resultadosCor), ('texture', resultadosTextura)]:
         df = pd.DataFrame([{'stage': e, **d} for e, d in resultados.items()])
         df.to_csv(os.path.join(RAIZ, f'results_{nome}_final.csv'), index=False)
