@@ -1,7 +1,8 @@
 # VMamba para Classificação de Atributos de Roupas
 
 Iniciação Científica
-Orientadores: Alceu e Arlete 
+
+Orientadores: Alceu Britto e Arlete Beuren
 
 ## O que é esse projeto?
 
@@ -9,7 +10,7 @@ Esse projeto usa o Visual Mamba para classificar atributos de roupas, como cor e
 
 ## Como funciona?
 
-O VMamba tem 4 estágios (camadas). Cada estágio "enxerga" a imagem de um jeito diferente:
+O VMamba tem 4 estágios. Cada estágio "enxerga" a imagem de um jeito diferente:
 
 - stage 1: Vê detalhes básicos, tais como bordas e cores
 - Stage 2: Vê padrões simples como texturas e formas
