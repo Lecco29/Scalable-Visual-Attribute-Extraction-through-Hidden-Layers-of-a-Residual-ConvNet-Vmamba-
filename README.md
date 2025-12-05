@@ -29,26 +29,26 @@ As imagens foram redimensionadas para 224x224 e normalizadas com os valores do I
 
 ### Modelo
 
-VMamba-Tiny pré-treinado no ImageNet-1K (82.6% top-1)
-Pesos do HuggingFace: `saurabhati/VMamba_ImageNet_82.6`
+- VMamba-Tiny pré-treinado no ImageNet-1K (82.6% top-1)
+- Pesos do HuggingFace: `saurabhati/VMamba_ImageNet_82.6`
 
 ### Extração de Features
 
-Features extraídas dos 4 estágios usando hooks
-Global Average Pooling para reduzir dimensão espacial
-Dimensões: Stage1=192, Stage2=384, Stage3=768, Stage4=768
+- Features extraídas dos 4 estágios usando hooks
+- Global Average Pooling para reduzir dimensão espacial
+- Dimensões: Stage1=192, Stage2=384, Stage3=768, Stage4=768
 
 ### Classificação
 
-Algoritmo: k-NN com parametros assim: k=5, distância euclidiana
-Validação: 5-fold Stratified Cross-Validation
-Em cada fold: 80% treino, 20% teste
+- Algoritmo: k-NN com parametros assim: k=5, distância euclidiana
+- Validação: 5-fold Stratified Cross-Validation
+- Em cada fold: 80% treino, 20% teste
 
 ### Métricas
 
-Acurácia média em %
-Desvio padrão entre os folds
-F1-Score 
+- Acurácia média em %
+- Desvio padrão entre os folds
+- F1-Score 
 
 
 ## Como rodar
