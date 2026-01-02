@@ -5,23 +5,23 @@ import torch
 from tqdm import tqdm
 
 
-def extrairFeatures(extrator, imagens, dispositivo, tamanhoBatch=64):
+def extrairFeatures(extrator, imagens, dispositivo, tamanhoLote=64):
     # extrai features de todas as imagens usando o vmamba
     # retorna dicionario com features de cada estagio
     
     todasFeatures = {f'stage{i+1}': [] for i in range(4)}
-    nBatches = (len(imagens) + tamanhoBatch - 1) // tamanhoBatch
+    numLotes = (len(imagens) + tamanhoLote - 1) // tamanhoLote
     
-    for i in tqdm(range(nBatches), desc="Extraindo"):
-        inicio = i * tamanhoBatch
-        fim = min((i + 1) * tamanhoBatch, len(imagens))
-        batch = imagens[inicio:fim].to(dispositivo)
+    for indiceLote in tqdm(range(numLotes), desc="Extraindo"):
+        inicio = indiceLote * tamanhoLote
+        fim = min((indiceLote + 1) * tamanhoLote, len(imagens))
+        loteImagens = imagens[inicio:fim].to(dispositivo)
         
         # extrai features com global average pooling
-        features = extrator.extrairFeatures(batch, aplicarGAP=True)
+        featuresLote = extrator.extrairFeatures(loteImagens, aplicarGAP=True)
         
-        for estagio, feat in features.items():
-            todasFeatures[estagio].append(feat.numpy())
+        for estagio, feature in featuresLote.items():
+            todasFeatures[estagio].append(feature.numpy())
     
     # junta todos os batches
     for estagio in todasFeatures:

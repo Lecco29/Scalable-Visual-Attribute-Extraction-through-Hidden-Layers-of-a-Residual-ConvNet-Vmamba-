@@ -20,9 +20,9 @@ class ExtratorVMamba:
         
         # configura o dispositivo
         if dispositivo == 'auto':
-            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            self.dispositivo = 'cuda' if torch.cuda.is_available() else 'cpu'
         else:
-            self.device = dispositivo
+            self.dispositivo = dispositivo
         
         # dimensoes de cada estagio do vmamba tiny
         self.dimEstagios = {
@@ -47,24 +47,24 @@ class ExtratorVMamba:
         
         # cria o modelo
         config = VMambaConfig()
-        self.model = VMambaForImageClassification(config)
+        self.modelo = VMambaForImageClassification(config)
         
         # carrega os pesos pre treinados
         caminhoPesos = os.path.join(RAIZ, 'model.safetensors')
         if os.path.exists(caminhoPesos):
             pesos = load_file(caminhoPesos)
-            self.model.load_state_dict(pesos)
+            self.modelo.load_state_dict(pesos)
             print("[VMamba] Pesos carregados!")
         else:
             print("[VMamba] AVISO: pesos nao encontrados, usando pesos aleatorios")
         
-        self.model = self.model.to(self.device)
-        self.model.eval()
+        self.modelo = self.modelo.to(self.dispositivo)
+        self.modelo.eval()
         
         # registra os hooks para capturar features
         self.registrarHooks()
         
-        print(f"[VMamba] Dispositivo: {self.device}")
+        print(f"[VMamba] Dispositivo: {self.dispositivo}")
         print(f"[VMamba] Dimensoes: {self.dimEstagios}")
     
     def registrarHooks(self):
@@ -82,32 +82,32 @@ class ExtratorVMamba:
         self.hooks = []
         
         # registra hooks nos layers do vmamba
-        vmamba = self.model.vmamba
+        vmamba = self.modelo.vmamba
         if hasattr(vmamba, 'layers'):
-            for i, camada in enumerate(vmamba.layers):
-                hook = camada.register_forward_hook(criarHook(f'stage{i+1}'))
+            for indice, camada in enumerate(vmamba.layers):
+                hook = camada.register_forward_hook(criarHook(f'stage{indice+1}'))
                 self.hooks.append(hook)
     
-    def extrairFeatures(self, x, aplicarGAP=True):
+    def extrairFeatures(self, entrada, aplicarGAP=True):
         # extrai features de todos os estagios
-        # x = tensor de entrada [B, C, H, W]
+        # entrada = tensor de entrada [B, C, H, W]
         # aplicarGAP = se True, faz Global Average Pooling
         # retorna dicionario com features de cada estagio
         
         self.features = {}
         
         with torch.no_grad():
-            _ = self.model(x)
+            _ = self.modelo(entrada)
         
         resultado = {}
-        for nome, feat in self.features.items():
+        for nome, feature in self.features.items():
             if aplicarGAP:
                 # global average pooling: transforma [B,C,H,W] em [B,C]
-                if len(feat.shape) == 4:
-                    feat = feat.mean(dim=[2, 3])
-                elif len(feat.shape) == 3:
-                    feat = feat.mean(dim=1)
-            resultado[nome] = feat.cpu()
+                if len(feature.shape) == 4:
+                    feature = feature.mean(dim=[2, 3])
+                elif len(feature.shape) == 3:
+                    feature = feature.mean(dim=1)
+            resultado[nome] = feature.cpu()
         
         return resultado
     

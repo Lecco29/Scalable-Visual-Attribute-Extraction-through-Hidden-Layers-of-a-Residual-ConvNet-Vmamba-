@@ -1,37 +1,152 @@
-# avaliacao com knn e validacao cruzada
+# avaliacao com knn usando folds pre-definidos
 
+import os
+import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
 
 
-def avaliarKNN(features, labels, k=5, nfolds=5):
-    # avalia as features com knn e validacao cruzada
-    # retorna dicionario com acuracia e f1 de cada estagio
+def carregarFold(caminhoArquivo, pastaImagensLocal):
+    # carrega um arquivo de fold (train/val/test)
+    # retorna lista de nomes de imagem e labels
     
-    encoder = LabelEncoder()
-    y = encoder.fit_transform(labels)
+    listaNomes = []
+    listaRotulos = []
+    
+    with open(caminhoArquivo, 'r') as arquivoLeitura:
+        for linha in arquivoLeitura:
+            partes = linha.strip().split(';')
+            if len(partes) >= 3:
+                idClasse = int(partes[0])
+                nomeClasse = partes[1]
+                caminhoOriginal = partes[2]
+                
+                # extrai so o nome do arquivo
+                nomeArquivo = os.path.basename(caminhoOriginal)
+                
+                listaNomes.append(nomeArquivo)
+                listaRotulos.append(nomeClasse)
+    
+    return listaNomes, listaRotulos
+
+
+def pegarIndices(nomesCompletos, nomesFold):
+    # retorna os indices das imagens que estao no fold
+    
+    listaIndices = []
+    for indice, nome in enumerate(nomesCompletos):
+        nomeBase = os.path.basename(nome)
+        if nomeBase in nomesFold:
+            listaIndices.append(indice)
+    
+    return listaIndices
+
+
+def avaliarKNNComFolds(features, rotulos, nomesImagens, pastaProtocolo, tipoDataset='color', k=5):
+    # avalia as features com knn usando os folds pre-definidos
+    # tipoDataset = 'color' ou 'texture'
+    
+    codificador = LabelEncoder()
+    rotulosNumericos = codificador.fit_transform(rotulos)
+    
+    # caminho dos folds
+    if tipoDataset == 'color':
+        pastaFolds = os.path.join(pastaProtocolo, 'folds_color', 'folds')
+    else:
+        pastaFolds = os.path.join(pastaProtocolo, 'folds_texture', 'folds')
     
     resultados = {}
     
-    for estagio, X in features.items():
-        knn = KNeighborsClassifier(n_neighbors=k, metric='euclidean')
+    for estagio, dadosFeatures in features.items():
+        listaAcuracias = []
+        listaF1Scores = []
         
-        # validacao cruzada
-        acuracias = cross_val_score(knn, X, y, cv=nfolds, scoring='accuracy')
+        # processa cada fold
+        for numFold in range(1, 6):
+            # carrega arquivos do fold
+            arquivoTreino = os.path.join(pastaFolds, f'fold{numFold}-train.txt')
+            arquivoVal = os.path.join(pastaFolds, f'fold{numFold}-val.txt')
+            arquivoTeste = os.path.join(pastaFolds, f'fold{numFold}-test.txt')
+            
+            # carrega nomes de cada particao
+            nomesTreino, _ = carregarFold(arquivoTreino, '')
+            nomesVal, _ = carregarFold(arquivoVal, '')
+            nomesTeste, _ = carregarFold(arquivoTeste, '')
+            
+            # junta train + val para treino (como no protocolo padrao)
+            nomesTreinoCompleto = set(nomesTreino + nomesVal)
+            nomesTesteCompleto = set(nomesTeste)
+            
+            # encontra indices
+            indicesTreino = []
+            indicesTeste = []
+            
+            for indice, nome in enumerate(nomesImagens):
+                nomeBase = os.path.basename(nome)
+                if nomeBase in nomesTreinoCompleto:
+                    indicesTreino.append(indice)
+                elif nomeBase in nomesTesteCompleto:
+                    indicesTeste.append(indice)
+            
+            if len(indicesTreino) == 0 or len(indicesTeste) == 0:
+                print(f"  Aviso: fold {numFold} sem dados suficientes")
+                continue
+            
+            # separa dados
+            dadosTreino = dadosFeatures[indicesTreino]
+            rotulosTreino = rotulosNumericos[indicesTreino]
+            dadosTeste = dadosFeatures[indicesTeste]
+            rotulosTeste = rotulosNumericos[indicesTeste]
+            
+            # treina e avalia knn
+            classificadorKNN = KNeighborsClassifier(n_neighbors=k, metric='euclidean')
+            classificadorKNN.fit(dadosTreino, rotulosTreino)
+            predicoes = classificadorKNN.predict(dadosTeste)
+            
+            acuracia = accuracy_score(rotulosTeste, predicoes)
+            f1Score = f1_score(rotulosTeste, predicoes, average='weighted')
+            
+            listaAcuracias.append(acuracia)
+            listaF1Scores.append(f1Score)
         
-        # f1 score
-        knn.fit(X, y)
-        predicao = knn.predict(X)
-        f1 = f1_score(y, predicao, average='weighted')
-        
+        # calcula media e desvio
         resultados[estagio] = {
-            'accuracy_mean': acuracias.mean() * 100,
-            'accuracy_std': acuracias.std() * 100,
-            'f1_score': f1 * 100,
-            'dim': X.shape[1]
+            'accuracy_mean': np.mean(listaAcuracias) * 100,
+            'accuracy_std': np.std(listaAcuracias) * 100,
+            'f1_score': np.mean(listaF1Scores) * 100,
+            'dim': dadosFeatures.shape[1]
         }
     
     return resultados
 
+
+# funcao antiga para compatibilidade (nao usa mais)
+def avaliarKNN(features, rotulos, k=5, numFolds=5):
+    # usa validacao cruzada aleatoria (metodo antigo)
+    from sklearn.model_selection import cross_val_score, StratifiedKFold
+    
+    codificador = LabelEncoder()
+    rotulosNumericos = codificador.fit_transform(rotulos)
+    
+    skf = StratifiedKFold(n_splits=numFolds, shuffle=True, random_state=42)
+    
+    resultados = {}
+    
+    for estagio, dadosFeatures in features.items():
+        classificadorKNN = KNeighborsClassifier(n_neighbors=k, metric='euclidean')
+        
+        acuracias = cross_val_score(classificadorKNN, dadosFeatures, rotulosNumericos, cv=skf, scoring='accuracy')
+        
+        classificadorKNN.fit(dadosFeatures, rotulosNumericos)
+        predicoes = classificadorKNN.predict(dadosFeatures)
+        f1Score = f1_score(rotulosNumericos, predicoes, average='weighted')
+        
+        resultados[estagio] = {
+            'accuracy_mean': acuracias.mean() * 100,
+            'accuracy_std': acuracias.std() * 100,
+            'f1_score': f1Score * 100,
+            'dim': dadosFeatures.shape[1]
+        }
+    
+    return resultados
